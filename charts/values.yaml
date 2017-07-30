@@ -1,0 +1,11 @@
+pull_policy: Always
+
+coordinator:
+  port: 5345
+
+shim:
+  port: 7955
+
+gateway:
+  port: 3491
+  svc_type: NodePort

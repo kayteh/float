@@ -1,0 +1,54 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: gateway
+  labels:
+    heritage: float
+  annotations:
+    "float/version": {{ .Values.docker_tag }}
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      component: gateway
+  template:
+    metadata:
+      labels:
+        component: gateway
+        float/version: {{ .Values.docker_tag }}    
+      annotations:
+        float: gateway
+    spec:
+      containers:
+      - name: float-gateway
+        image: "{{ .Values.repo_prefix }}gateway:{{ .Values.docker_tag }}"
+        imagePullPolicy: {{ .Values.pull_policy }}
+        tty: false
+        # livenessProbe:
+        #   httpGet:
+        #     path: /+/healthz
+        #     port: {{ .Values.gateway.port }}
+        #   initialDelaySeconds: 30
+        #   timeoutSeconds: 10
+        # readinessProbe:
+        #   httpGet:
+        #     path: /+/readiness
+        #     port: {{ .Values.gateway.port }}
+        #   initialDelaySeconds: 30
+        #   timeoutSeconds: 10
+        #   periodSeconds: 5
+        ports:
+        - containerPort: {{ .Values.gateway.port }}
+          name: http
+        env:
+        - name: IS_PROD
+          value: "1"
+        - name: COORDINATOR_URL
+          value: "http://coordinator.float"
+        - name: PORT
+          value: "{{ .Values.gateway.port }}"

@@ -3,11 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 	"os/exec"
+	"time"
 
+	"github.com/kayteh/float/shim/fn"
 	"github.com/valyala/fasthttp"
+	"golang.org/x/net/context"
 )
 
 func main() {
@@ -18,21 +22,9 @@ func main() {
 	log.Fatalln(srv.ListenAndServe(":7955"))
 }
 
-type request struct {
-	Body       []byte
-	Headers    map[string][]byte
-	URI        []byte
-	Method     []byte
-	RemoteAddr string
-}
-
-type response struct {
-	Body       string            `json:"body"`
-	StatusCode int               `json:"status_code"`
-	Headers    map[string]string `json:"headers"`
-}
-
 func handler(ctx *fasthttp.RequestCtx) {
+	// id := ksuid.New().String()
+
 	uri := ctx.RequestURI()
 
 	// Health check routes
@@ -41,16 +33,23 @@ func handler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	reqd := request{
-		Body:       ctx.Request.Body(),
-		URI:        ctx.Request.RequestURI(),
-		Headers:    map[string][]byte{},
-		Method:     ctx.Method(),
+	reqd := fn.Request{
+		Body:       string(ctx.Request.Body()),
+		URI:        string(ctx.Request.RequestURI()),
+		Headers:    map[string]string{},
+		Method:     string(ctx.Method()),
 		RemoteAddr: ctx.RemoteAddr().String(),
 	}
 
 	ctx.Request.Header.VisitAll(func(key, value []byte) {
-		reqd.Headers[string(key)] = value
+		k := string(key)
+		v := string(value)
+
+		if k == "Float-S3-URL" {
+			reqd.FuncPath = v
+		}
+
+		reqd.Headers[k] = v
 	})
 
 	buf := bytes.Buffer{}
@@ -60,25 +59,41 @@ func handler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	cmd := exec.Command("./testfunc")
+	fnctx, cancel := context.WithCancel(context.Background())
+	if err != nil {
+		ctx.Error(err.Error(), 500)
+		return
+	}
+	cmd := exec.CommandContext(fnctx, "./testfunc")
+
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		ctx.Error(err.Error(), 500)
 		return
 	}
-	buf.WriteTo(stdin)
 
 	obuf := bytes.Buffer{}
 	cmd.Stdout = &obuf
 	cmd.Stderr = os.Stderr
 
-	err = cmd.Run()
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, buf.String())
+		log.Println("wrote payload", buf.String())
+	}()
+	err = cmd.Start()
 	if err != nil {
 		ctx.Error(err.Error(), 500)
 		return
 	}
 
-	var result response
+	err = cmd.Wait()
+	if err != nil {
+		ctx.Error(err.Error(), 500)
+		return
+	}
+
+	var result fn.Response
 	err = json.NewDecoder(&obuf).Decode(&result)
 	if err != nil {
 		ctx.Error(err.Error(), 500)
@@ -91,4 +106,14 @@ func handler(ctx *fasthttp.RequestCtx) {
 	for k, v := range result.Headers {
 		ctx.Response.Header.Add(k, v)
 	}
+
+	go func() {
+		select {
+		case <-time.After(10 * time.Second):
+			cancel()
+			os.Stderr.Sync()
+			os.Exit(0)
+		}
+	}()
+
 }

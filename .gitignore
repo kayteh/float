@@ -28,3 +28,13 @@ vendor
 testfunc
 
 testshim
+
+\.vscode/
+
+\.DS_Store
+
+coordinator/coordinator
+
+gateway/gateway
+
+shim/shim

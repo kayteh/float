@@ -16,16 +16,18 @@ var (
 )
 
 func main() {
-	coordinator, err := util.Getenvdef("COORDINATOR_URL", "http://coordinator.float").String()
+	coordinator, err := util.Getenvdef("COORDINATOR_URL", "coordinator.float").String()
 	if err != nil {
 		logger.WithError(err).Fatal("failed to get coordinator url")
 	}
+
+	logger.Info("hi")
 
 	s := run.Server{
 		CoordinatorAddr: coordinator,
 		Logger:          logger,
 	}
+	logger.Info("coordinator url: ", coordinator)
 
 	s.Start()
-	logger.Info("connecting to ", coordinator)
 }

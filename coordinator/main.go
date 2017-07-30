@@ -8,32 +8,46 @@
 package main
 
 import (
+	"fmt"
 	"log"
+
+	"github.com/kayteh/float/util"
 
 	"github.com/buaazp/fasthttprouter"
 	"github.com/valyala/fasthttp"
 )
 
+type Server struct {
+	S3URL string
+}
+
 // This is straight-forward. Create a server, run the server.
 func main() {
+	host, _ := util.Getenvdef("HOST", "").String()
+	port, _ := util.Getenvdef("PORT", 4563).Int()
+	s3, _ := util.Getenvdef("S3URL", "http://float-minio-minio-svc:9000").String()
+
+	s := &Server{
+		S3URL: s3,
+	}
+
 	r := fasthttprouter.New()
+	r.POST("/route-info", s.handleRouteInfo)
 
-	r.POST("/route-info", handleRouteInfo)
-
-	s := &fasthttp.Server{
+	srv := &fasthttp.Server{
 		Handler: r.Handler,
 	}
 
-	s.ListenAndServe(":5345")
+	srv.ListenAndServe(fmt.Sprintf("%s:%d", host, port))
 }
 
 // handleRouteInfo is a WIP function.
 // This route will take a POST /route-info, match it against some rules,
 // e.g. if $Header matches /regex/, match to function X()
 // And return (and possibly start) a container ready to serve it.
-func handleRouteInfo(ctx *fasthttp.RequestCtx) {
+func (s *Server) handleRouteInfo(ctx *fasthttp.RequestCtx) {
 	// TODO: grab routes from a database (postgres?)
 	// TODO: match route-info data against some rules.
 	log.Println("route-info call")
-	ctx.WriteString(`{"addr": "localhost:7955"}`)
+	ctx.WriteString(`{"addr": "functions.float"}`)
 }

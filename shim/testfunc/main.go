@@ -1,10 +1,18 @@
 package main
 
 import (
-	"os"
+	"encoding/json"
+
+	"github.com/kayteh/float/shim/fn"
 )
 
 func main() {
-	os.Stdout.WriteString(`{"status_code":404, "headers": {"X-Test": "tseT-X"}, "body":"hello world!"}`)
-	os.Stderr.WriteString("called\n")
+	fn.Handle(func(ctx *fn.Context) {
+
+		ctx.Response.StatusCode = 418
+		json.NewEncoder(ctx).Encode(map[string]string{
+			"hello": "world",
+		})
+
+	})
 }

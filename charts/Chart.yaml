@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Float - Serverless Architecture
+name: float
+version: 0.1.0

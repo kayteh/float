@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: gateway
+  labels:
+    heritage: float
+  annotations:
+    float/svc: internal
+spec:
+  selector:
+    component: gateway
+  type: {{ .Values.gateway.svc_type }}
+  ports:
+  - name: http
+    port: 80
+    targetPort: {{ .Values.gateway.port }}
