@@ -1,3 +1,8 @@
+// The gateway's job is to accept HTTP requests from the outside world,
+// and proxy them to kubernetes pods based on route-info responses from
+// the coordinator.
+// This should ideally be scalable, and only cache if it's *100%* necessary.
+// This is one of two long-running services that facilitate serverless architecture.
 package main
 
 import (
