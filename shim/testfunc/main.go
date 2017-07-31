@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	fn.Handle(func(ctx *fn.Context) {
+	fn.Handle(func(ctx *fn.FuncCtx) {
 
 		ctx.Response.StatusCode = 418
 		json.NewEncoder(ctx).Encode(map[string]string{
