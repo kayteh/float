@@ -41,6 +41,7 @@ func TestHandle(t *testing.T) {
 			t.Error("stdin was not parsed correctly", ctx)
 		}
 
+		ctx.SetHeader("X-Test", "tseT-X")
 		err := json.NewEncoder(ctx).Encode(map[string]string{
 			"hi": "how are you",
 		})
@@ -48,16 +49,6 @@ func TestHandle(t *testing.T) {
 			t.Error(err)
 			return
 		}
-
-		err = json.NewDecoder(body).Decode(&out)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		ctx.finalized = false
-		ctx.outputBuf.Reset()
-
 	})
 
 	var rsp Response

@@ -121,11 +121,16 @@ func (c *FuncCtx) WriteJSON(v interface{}) error {
 
 	c.finalized = true
 	c.outputBuf.Reset()
+	c.SetHeader("Content-Type", "application/json")
 	return json.NewEncoder(c).Encode(v)
 }
 
 func (c *FuncCtx) writeResponse(w io.Writer) error {
 	return json.NewEncoder(w).Encode(c.Response)
+}
+
+func (c *FuncCtx) SetHeader(k, v string) {
+	c.Response.Headers[k] = v
 }
 
 // Handle is the entrypoint for your function's handler.

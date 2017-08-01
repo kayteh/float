@@ -108,7 +108,7 @@ $(BINARIES): $(SOURCES)
 	@$(GO) generate ./$(dir $@)...
 # ***
 # --> build server
-	@if [ `$(DOCKER_COMPOSE) ps | grep -c build-server` == "0" ]; then\
+	@if [ `$(DOCKER_COMPOSE) ps | grep build-server | grep -c -v Exit` == "0" ]; then\
 	  echo "⚙️ starting build server";\
 	  $(DOCKER_COMPOSE) up -d build-server;\
 	fi

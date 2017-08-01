@@ -32,6 +32,12 @@
   version = "v1.1"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/segmentio/ksuid"
+  packages = ["."]
+  revision = "e3c9952840557adbb3538b1039e783d44c21ae4a"
+
+[[projects]]
   name = "github.com/valyala/fasthttp"
   packages = [".","fasthttputil"]
   revision = "d42167fd04f636e20b005e9934159e95454233c7"
@@ -52,6 +58,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "26511c8e76d552ab046ab345f49b234bf20b32a653e2cc461d94e1eab4adca08"
+  inputs-digest = "f382ec44cd9395a9ee75df11ce6ff6fffeffdd3b70a270616cc5a0d868cbf53d"
   solver-name = "gps-cdcl"
   solver-version = 1

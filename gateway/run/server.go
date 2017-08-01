@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/kayteh/float/util/httputil"
 	"github.com/valyala/fasthttp"
 )
 
@@ -40,7 +41,7 @@ func (s *Server) Start() {
 	}
 
 	srv := &fasthttp.Server{
-		Handler: s.director,
+		Handler: httputil.Logging(s.Logger, s.director),
 	}
 
 	srv.ListenAndServe(":3491")
@@ -56,6 +57,7 @@ func (s *Server) Start() {
 // Even editing the request in-flight just to re-call was difficult.
 // I personally prefer the simplicity of fasthttp, so that's why it's used here.
 func (s *Server) director(ctx *fasthttp.RequestCtx) {
+	log := ctx.UserValue("log").(*logrus.Entry)
 
 	// first, take relevant parts of the request
 	buf := bytes.Buffer{}
@@ -67,22 +69,30 @@ func (s *Server) director(ctx *fasthttp.RequestCtx) {
 		Method:     ctx.Method(),
 	})
 	if err != nil {
-		s.Logger.WithError(err).Error("route-info: json encode failed")
+		log.WithError(err).Error("route-info: json encode failed")
 		ctx.Error(err.Error(), 500)
 		return
 	}
 
-	_, infoData, err := s.Client.Post(buf.Bytes(), s.CoordinatorAddr+"/route-info", nil)
+	rireq := fasthttp.AcquireRequest()
+	rireq.Header.SetHost(s.CoordinatorAddr)
+	rireq.SetBodyStream(&buf, buf.Len())
+	rireq.Header.Set("Float-Req-ID", ctx.UserValue("reqid").(string))
+	rireq.SetRequestURI("/route-info")
+	rireq.Header.SetMethod("POST")
+
+	rirsp := fasthttp.AcquireResponse()
+	err = s.Client.Do(rireq, rirsp)
 	if err != nil {
-		s.Logger.WithError(err).Error("route-info: request failed")
+		log.WithError(err).Error("route-info: request failed")
 		ctx.Error(err.Error(), 500)
 		return
 	}
 
 	var info routeInfoResponse
-	err = json.Unmarshal(infoData, &info)
+	err = json.Unmarshal(rirsp.Body(), &info)
 	if err != nil {
-		s.Logger.WithError(err).Errorf("route-info: json decode failed: \n%s", infoData)
+		log.WithError(err).Errorf("route-info: json decode failed: \n%s", rirsp.Body())
 		ctx.Error(err.Error(), 500)
 		return
 	}
@@ -92,7 +102,7 @@ func (s *Server) director(ctx *fasthttp.RequestCtx) {
 
 	br, bw := io.Pipe()
 	go func() {
-		ctx.Request.WriteTo(bw)
+		ctx.Request.BodyWriteTo(bw)
 		bw.Close()
 	}()
 	preq.SetBodyStream(br, ctx.Request.Header.ContentLength())
@@ -100,11 +110,12 @@ func (s *Server) director(ctx *fasthttp.RequestCtx) {
 	ctx.Request.Header.CopyTo(&preq.Header)
 	preq.Header.SetHost(info.Addr)
 	preq.SetRequestURIBytes(ctx.RequestURI())
+	preq.Header.Set("Float-Req-ID", ctx.UserValue("reqid").(string))
 
 	resp := fasthttp.AcquireResponse()
 	err = s.Client.Do(preq, resp)
 	if err != nil {
-		s.Logger.WithError(err).WithField("url", preq.URI()).Error("proxy request failed")
+		log.WithError(err).WithField("url", preq.URI()).Error("proxy request failed")
 		ctx.Error(err.Error(), 500)
 		return
 	}

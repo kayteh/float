@@ -9,14 +9,16 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/kayteh/float/shim/fn"
+	"github.com/kayteh/float/util/httputil"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/net/context"
 )
 
 func main() {
 	srv := &fasthttp.Server{
-		Handler: handler,
+		Handler: httputil.Logging(logrus.WithFields(logrus.Fields{}), handler),
 	}
 
 	log.Fatalln(srv.ListenAndServe(":7955"))
